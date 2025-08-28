@@ -1,0 +1,60 @@
+@use 'mixins' as *;
+.loginPage {
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    padding: 16px;
+    background: radial-gradient(circle, rgba(230,247,255,1) 0%, rgba(240,245,255,1) 100%);
+}
+
+.contentWrapper {
+    margin: auto;
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    max-width: 900px;
+    background: #fff;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+
+    // Use the mixin for tablet and smaller screens
+    @include tablet {
+      flex-direction: column;
+    }
+}
+
+.formSection {
+    flex: 1;
+    padding: 48px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+
+    @include tablet {
+      padding: 32px;
+    }
+}
+
+.brandingSection {
+    flex: 1;
+    background: linear-gradient(135deg, #1677ff 0%, #0050b3 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 48px;
+    color: #fff;
+    text-align: center;
+
+    @include tablet {
+      padding: 32px;
+      order: -1;
+    }
+}
+
+// No changes needed for other styles like .resendTimer etc.
+.resendTimer {
+  text-align: center;
+  margin-top: 16px;
+}
