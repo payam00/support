@@ -16,6 +16,8 @@ const classTypeRoutes = require('./src/routes/classType.routes');
 const invoiceRoutes = require('./src/routes/invoice.routes');
 const discountRoutes = require('./src/routes/discount.routes'); // <-- Import crucial
 const paymentRoutes = require('./src/routes/payment.routes'); // <-- Import crucial
+const woocommerceRoutes = require('./src/routes/woocommerce.routes');
+const announcementRoutes = require('./src/routes/announcement.routes');
 
 require('./src/models/setting.model');
 
@@ -43,5 +45,7 @@ app.use('/api/classtypes', classTypeRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/discounts', discountRoutes); 
 app.use('/api/payment', paymentRoutes); 
+app.use('/api/woocommerce', woocommerceRoutes);
+app.use('/api/announcements', announcementRoutes);
 
 module.exports = app;

@@ -1,26 +1,61 @@
 'use client';
 
-import React from 'react';
-import { useAuth } from '@/context/AuthContext';
-import { Spin, Typography } from 'antd';
-import UserTicketList from '@/app/components/dashboard/UserTicketList';
-import OperatorTicketTable from '@/app/components/dashboard/OperatorTicketTable';
+import React, { useState, useEffect } from 'react';
+import { Spin, Alert, Typography, Space } from 'antd';
+import api from '@/lib/api';
+import { format } from 'date-fns-jalali';
 
-const { Title } = Typography;
+const { Title, Text } = Typography;
+
+interface Announcement {
+    _id: string;
+    title: string;
+    content: string;
+    type: 'success' | 'info' | 'warning' | 'error';
+    createdAt: string;
+}
 
 export default function DashboardPage() {
-  const { user, isLoading } = useAuth(); // Read user role from context
+    const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+    const [loading, setLoading] = useState(true);
 
-  if (isLoading) {
-    return <Spin size="large" />;
-  }
+    useEffect(() => {
+        api.get('/announcements/active')
+            .then(res => setAnnouncements(res.data))
+            .catch(err => console.error("Failed to fetch announcements:", err))
+            .finally(() => setLoading(false));
+    }, []);
 
-  const isOperator = user?.role === 'operator' || user?.role === 'department_head' || user?.role === 'admin';
+    if (loading) {
+        return <Spin fullscreen tip="در حال بارگذاری..." />;
+    }
 
-  return (
-    <div>
-      <Title level={3}>داشبورد</Title>
-      {isOperator ? <OperatorTicketTable /> : <UserTicketList />}
-    </div>
-  );
+    return (
+        <div>
+            <Title level={2}>اطلاعیه‌ها</Title>
+            <Space direction="vertical" style={{ width: '100%' }}>
+                {announcements.length > 0 ? (
+                    announcements.map(ann => (
+                        <Alert
+                            key={ann._id}
+                            message={ann.title}
+                            description={
+                                <div>
+                                    <div dangerouslySetInnerHTML={{ __html: ann.content }} />
+                                    <Text type="secondary" style={{ display: 'block', marginTop: '10px', fontSize: '12px' }}>
+                                        تاریخ انتشار: {format(new Date(ann.createdAt), 'yyyy/MM/dd')}
+                                    </Text>
+                                </div>
+                            }
+                            type={ann.type}
+                            showIcon
+                            style={{ width: '100%' }}
+                        />
+                    ))
+                ) : (
+                    <Alert message="اطلاعیه جدیدی وجود ندارد." type="info" showIcon />
+                )}
+            </Space>
+        </div>
+    );
 }

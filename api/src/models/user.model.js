@@ -39,7 +39,17 @@ const userSchema = new Schema({
         canViewAllInvoices: {
             type: Boolean,
             default: false
-        }
+        },
+        canManageTickets: {
+             type: Boolean, default: false 
+            },
+        canViewWooCommerceOrders: { 
+            type: Boolean, default: false
+         },
+        canViewInvoiceStats: {
+             type: Boolean, default: false
+             },
+
     },
     // -----------------
     otpRequestTimestamps: {

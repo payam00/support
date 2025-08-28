@@ -24,3 +24,23 @@ export const TICKET_PRIORITY_PERSIAN: Record<Ticket['priority'], string> = {
   Medium: 'متوسط',
   High: 'بالا',
 };
+// --- NEW: Localization for WooCommerce statuses ---
+export const WOOCOMMERCE_STATUS_PERSIAN: Record<string, string> = {
+  'pending': 'در انتظار پرداخت',
+  'processing': 'در حال انجام',
+  'on-hold': 'در انتظار بررسی',
+  'completed': 'تکمیل شده',
+  'cancelled': 'لغو شده',
+  'refunded': 'مسترد شده',
+  'failed': 'ناموفق',
+};
+
+export const WOOCOMMERCE_STATUS_COLORS: Record<string, string> = {
+    'pending': 'gold',
+    'processing': 'blue',
+    'on-hold': 'orange',
+    'completed': 'green',
+    'cancelled': 'red',
+    'refunded': 'purple',
+    'failed': 'magenta',
+};

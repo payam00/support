@@ -63,3 +63,14 @@ export interface Referral {
     note: string;
     referredAt: string;
 }
+ export interface Order {
+  id: number;
+  number: string;
+  status: 'pending' | 'processing' | 'on-hold' | 'completed' | 'cancelled' | 'refunded' | 'failed' | string;
+  date_created: string;
+  total: string;
+  billing: {
+    first_name: string;
+    last_name: string;
+  };
+}

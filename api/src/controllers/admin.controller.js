@@ -35,9 +35,13 @@ exports.updateUser = async (req, res) => {
 
         if (name) updateFields.name = name;
         if (role) updateFields.role = role;
+        
         if (permissions) {
             updateFields['permissions.canCreateInvoice'] = permissions.canCreateInvoice;
             updateFields['permissions.canViewAllInvoices'] = permissions.canViewAllInvoices;
+            updateFields['permissions.canManageTickets'] = permissions.canManageTickets;
+            updateFields['permissions.canViewWooCommerceOrders'] = permissions.canViewWooCommerceOrders;
+            updateFields['permissions.canViewInvoiceStats'] = permissions.canViewInvoiceStats;
         }
 
         const user = await User.findByIdAndUpdate(req.params.id, updateFields, { new: true });
@@ -48,7 +52,6 @@ exports.updateUser = async (req, res) => {
         res.status(500).json({ message: 'خطای سرور' });
     }
 };
-
 exports.getSettings = async (req, res) => {
     try {
         const settings = await Setting.findOne();

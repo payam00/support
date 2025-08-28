@@ -20,11 +20,14 @@ import {
   UsergroupAddOutlined,
   LineChartOutlined,
   DownloadOutlined,
-  VideoCameraAddOutlined ,
-    FileTextOutlined, 
+  VideoCameraAddOutlined,
+  FileTextOutlined,
   DollarCircleOutlined,
-  EditOutlined, 
   GiftOutlined,
+  BookOutlined,
+  EditOutlined,
+  MessageOutlined,
+  NotificationOutlined 
 } from '@ant-design/icons';
 import styles from './layout.module.scss';
 import Link from 'next/link';
@@ -79,19 +82,32 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { key: 'logout', label: 'خروج از حساب', icon: <LogoutOutlined />, onClick: handleLogout, danger: true },
   ];
   
-    const mainMenuItems = useMemo((): MenuProps['items'] => {
+  const mainMenuItems = useMemo((): MenuProps['items'] => {
     if (!user) return [];
     
-    const isStaff = user.role === 'operator' || user.role === 'department_head' || user.role === 'admin';
-    const isManager = user.role === 'department_head' || user.role === 'admin';
+    // Define access flags based on roles and permissions
     const isAdmin = user.role === 'admin';
-    
+    const isManager = user.role === 'department_head' || isAdmin;
+    const canManageTickets = user.permissions?.canManageTickets || isAdmin;
+    const canViewWooOrders = user.permissions?.canViewWooCommerceOrders || isAdmin;
+    const canCreateInvoices = user.permissions?.canCreateInvoice || isAdmin;
+    const canViewInvoiceStats = user.permissions?.canViewInvoiceStats || isAdmin;
+
     return [
       { key: '/dashboard', icon: <HomeOutlined />, label: <Link href="/dashboard">داشبورد</Link> },
-      user.role === 'user' ? { key: '/tickets/new', icon: <PlusCircleOutlined />, label: <Link href="/tickets/new">تیکت جدید</Link> } : null,
+         (user.role === 'user' || canManageTickets) && { 
+        key: 'tickets-main', 
+        icon: <MessageOutlined />, 
+        label: 'تیکت‌ها',
+        children: [
+            user.role === 'user' && { key: '/tickets/new', label: <Link href="/tickets/new">تیکت جدید</Link> },
+            { key: '/tickets', label: <Link href="/tickets">لیست تیکت‌ها</Link> },
+        ].filter(Boolean)
+      },
+
+      canViewWooOrders ? { key: '/woocommerce/orders', icon: <BookOutlined />, label: <Link href="/woocommerce/orders">سفارشات سایت کتاب</Link> } : null,
       
-      // --- NEW MENU ITEMS FOR INVOICING ---
-      isStaff ? {
+      canCreateInvoices ? {
         key: 'invoicing',
         icon: <DollarCircleOutlined />,
         label: 'مدیریت فاکتورها',
@@ -100,9 +116,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           { key: '/invoices', icon: <FileTextOutlined />, label: <Link href="/invoices">لیست فاکتورها</Link> },
         ]
       } : null,
-      // ------------------------------------
 
-      isManager ? { key: '/stats', icon: <LineChartOutlined />, label: <Link href="/stats">آمار و گزارش‌ها</Link> } : null,
+(isManager || canViewInvoiceStats) && {
+        key: 'stats',
+        icon: <LineChartOutlined />,
+        label: 'آمارها',
+        children: [
+            isManager && { key: '/stats', label: <Link href="/stats">آمار تیکت‌ها</Link> },
+            canViewInvoiceStats && { key: '/invoice-stats', label: <Link href="/invoice-stats">آمار فاکتورها</Link> }
+        ].filter(Boolean)
+      },      
       isManager ? {
         key: 'management',
         icon: <TeamOutlined />,
@@ -112,6 +135,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           { key: '/manage/faqs', icon: <QuestionCircleOutlined />, label: <Link href="/manage/faqs">مدیریت سوالات متداول</Link> },
         ]
       } : null,
+
       isAdmin ? {
         key: 'admin',
         icon: <SettingOutlined />,
@@ -119,11 +143,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         children: [
             { key: '/admin/departments', icon: <AppstoreAddOutlined />, label: <Link href="/admin/departments">مدیریت دپارتمان‌ها</Link> },
             { key: '/admin/users', icon: <UsergroupAddOutlined />, label: <Link href="/admin/users">مدیریت کاربران</Link> },
-            // --- NEW ADMIN MENU ITEM ---
             { key: '/admin/class-types', icon: <EditOutlined />, label: <Link href="/admin/class-types">مدیریت انواع کلاس</Link> },
             { key: '/admin/discounts', icon: <GiftOutlined />, label: <Link href="/admin/discounts">مدیریت تخفیف‌ها</Link> },
             { key: '/admin/settings', icon: <SettingOutlined />, label: <Link href="/admin/settings">تنظیمات اصلی</Link> },
             { key: '/admin/video-flows', icon: <VideoCameraAddOutlined />, label: <Link href="/admin/video-flows">مدیریت ویجت ویدیو</Link> },
+            { key: '/admin/announcements', icon: <NotificationOutlined />, label: <Link href="/admin/announcements">مدیریت اطلاعیه‌ها</Link> },
             { key: '/admin/export', icon: <DownloadOutlined />, label: <Link href="/admin/export">خروجی تیکت‌ها (CSV)</Link> },
         ]
       } : null,
@@ -141,13 +165,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <AuthContext.Provider value={{ user, isLoading }}>
       <Layout className={styles.topLayout}>
-        <Sider breakpoint="lg" collapsedWidth={0} trigger={null} collapsible collapsed={collapsed} onCollapse={(c) => setCollapsed(c)} className={styles.sider}>
+        <Sider 
+          width={250} 
+          breakpoint="lg" 
+          collapsedWidth={0} 
+          trigger={null} 
+          collapsible 
+          collapsed={collapsed} 
+          onCollapse={(c: boolean) => setCollapsed(c)} 
+          className={styles.sider}
+        >
           <div className={styles.siderLogo}><Link href="/dashboard" /></div>
           <Menu theme="dark" mode="inline" selectedKeys={[pathname]} items={mainMenuItems} />
         </Sider>
         <Layout>
           <Header className={styles.header}>
-            <Button type="text" icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />} onClick={() => setCollapsed(!collapsed)} className={styles.collapseTrigger} />
+            <Button 
+              type="text" 
+              icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />} 
+              onClick={() => setCollapsed(!collapsed)} 
+              className={styles.collapseTrigger} 
+            />
             <div className={styles.headerMenu}>
               <Dropdown menu={{ items: userMenuItems }} trigger={['click']}>
                 <div className={styles.userProfile}>

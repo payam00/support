@@ -1,5 +1,6 @@
 const Ticket = require('../models/ticket.model');
 const Department = require('../models/department.model');
+const Invoice = require('../models/invoice.model');
 const mongoose = require('mongoose');
 
 exports.getDashboardStats = async (req, res) => {
@@ -54,5 +55,71 @@ exports.getDashboardStats = async (req, res) => {
     } catch (error) {
         console.error("Error in getDashboardStats:", error);
         res.status(500).json({ message: 'خطای سرور' });
+    }
+};
+exports.getInvoiceStats = async (req, res) => {
+    try {
+        // --- PERMISSION CHECK ---
+        if (req.user.role !== 'admin' && !req.user.permissions.canViewInvoiceStats) {
+            return res.status(403).json({ message: 'شما مجوز مشاهده آمار فاکتورها را ندارید.' });
+        }
+        // ------------------------
+        
+        // 1. Get overall invoice counts by status
+        const invoiceCounts = await Invoice.aggregate([
+            { $group: { _id: '$status', count: { $sum: 1 } } }
+        ]);
+
+        const formattedCounts = {
+            pending: 0,
+            paid: 0,
+            canceled: 0,
+            expired: 0,
+            total: 0
+        };
+        invoiceCounts.forEach(item => {
+            formattedCounts[item._id] = item.count;
+            formattedCounts.total += item.count;
+        });
+
+        // 2. Get operator performance
+        const operatorPerformance = await Invoice.aggregate([
+            {
+                $group: {
+                    _id: '$createdBy',
+                    totalIssued: { $sum: 1 },
+                    totalPaid: {
+                        $sum: { $cond: [{ $eq: ['$status', 'paid'] }, 1, 0] }
+                    }
+                }
+            },
+            {
+                $lookup: { 
+                    from: 'users',
+                    localField: '_id',
+                    foreignField: '_id',
+                    as: 'operator'
+                }
+            },
+            {
+                $unwind: '$operator'
+            },
+            {
+                $project: {
+                    _id: 0,
+                    operatorId: '$_id',
+                    operatorName: '$operator.name',
+                    totalIssued: 1,
+                    totalPaid: 1
+                }
+            },
+            { $sort: { totalIssued: -1 } }
+        ]);
+
+        res.status(200).json({ invoiceCounts: formattedCounts, operatorPerformance });
+
+    } catch (error) {
+        console.error("Invoice Stats Error:", error);
+        res.status(500).json({ message: 'خطا در محاسبه آمار فاکتورها' });
     }
 };

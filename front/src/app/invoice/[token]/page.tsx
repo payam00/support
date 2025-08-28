@@ -116,9 +116,11 @@ export default function PublicInvoicePage() {
     };
 
     return (
-        <div style={{ maxWidth: '800px', margin: '40px auto', padding: '20px' }}>
+        <div style={{ maxWidth: '900px', margin: '40px auto', padding: '20px' }}>
+          
             <Card>
-                <Title level={3}>فاکتور شماره: {invoice._id.slice(-6)}</Title>
+                <img src="/Header-Bill-Page.jpg" style={{ maxWidth: '100%'}} alt="header" className="logo" />
+                <Title level={3}>شناسه فاکتور: {invoice._id.slice(-6)}</Title>
                 <Descriptions bordered column={1}>
                     <Descriptions.Item label="نام کامل">{invoice.fullName}</Descriptions.Item>
                     <Descriptions.Item label="نوع کلاس">{invoice.classType.name}</Descriptions.Item>

@@ -1,19 +1,19 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { App, Table, Tag, Button, Modal, Form, Select, Spin, Typography, Input, Switch, Space } from 'antd';
+import { App, Table, Tag, Button, Modal, Form, Select, Spin, Typography, Input, Switch, Divider } from 'antd';
 import { EditOutlined, PlusOutlined, UserOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import api from '@/lib/api';
-import { UserInfo } from '@/types'; // فرض می‌شود تایپ UserInfo شامل فیلد permissions است
+import { UserInfo } from '@/types';
 
 const { Title } = Typography;
 
 export default function ManageUsersPage() {
     const [users, setUsers] = useState<UserInfo[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [isAddModalVisible, setIsAddModalVisible] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isAddModalVisible, setIsAddModalVisible] = useState(false);
     const [isEditModalVisible, setIsEditModalVisible] = useState(false);
     const [editingUser, setEditingUser] = useState<UserInfo | null>(null);
 
@@ -33,14 +33,16 @@ export default function ManageUsersPage() {
         fetchUsers();
     }, [fetchUsers]);
 
-    // --- Handlers for Edit Modal ---
     const showEditModal = (user: UserInfo) => {
         setEditingUser(user);
+        // Pre-fill form with all relevant data, including new permissions
         editForm.setFieldsValue({
             role: user.role,
             name: user.name,
             canCreateInvoice: user.permissions?.canCreateInvoice || false,
             canViewAllInvoices: user.permissions?.canViewAllInvoices || false,
+            canManageTickets: user.permissions?.canManageTickets || false,
+            canViewWooCommerceOrders: user.permissions?.canViewWooCommerceOrders || false,
         });
         setIsEditModalVisible(true);
     };
@@ -48,16 +50,16 @@ export default function ManageUsersPage() {
     const handleUpdateUser = async (values: any) => {
         if (!editingUser) return;
         setIsSubmitting(true);
-
         const payload = {
             name: values.name,
             role: values.role,
             permissions: {
                 canCreateInvoice: values.canCreateInvoice,
-                canViewAllInvoices: values.canViewAllInvoices
+                canViewAllInvoices: values.canViewAllInvoices,
+                canManageTickets: values.canManageTickets,
+                canViewWooCommerceOrders: values.canViewWooCommerceOrders,
             }
         };
-
         try {
             await api.put(`/admin/users/${editingUser._id}`, payload);
             message.success('اطلاعات کاربر با موفقیت تغییر کرد.');
@@ -70,7 +72,6 @@ export default function ManageUsersPage() {
         }
     };
 
-    // --- Handlers for Add Modal ---
     const showAddModal = () => {
         addForm.resetFields();
         setIsAddModalVisible(true);
@@ -111,13 +112,7 @@ export default function ManageUsersPage() {
             </div>
             <Table columns={columns} dataSource={users} rowKey="_id" style={{ marginTop: 24 }} scroll={{ x: true }} />
             
-            {/* --- Modal for Editing User (Updated with Permissions) --- */}
-            <Modal
-                title={`ویرایش کاربر: ${editingUser?.name || editingUser?.mobileNumber}`}
-                open={isEditModalVisible}
-                onCancel={() => setIsEditModalVisible(false)}
-                footer={null}
-            >
+            <Modal title={`ویرایش کاربر: ${editingUser?.name || editingUser?.mobileNumber}`} open={isEditModalVisible} onCancel={() => setIsEditModalVisible(false)} footer={null}>
                 <Form form={editForm} layout="vertical" onFinish={handleUpdateUser} style={{ marginTop: 24 }}>
                     <Form.Item name="name" label="نام و نام خانوادگی" rules={[{ required: true, message: 'نام الزامی است.' }]}>
                         <Input prefix={<UserOutlined />} />
@@ -131,23 +126,30 @@ export default function ManageUsersPage() {
                         </Select>
                     </Form.Item>
                     
-                    <Title level={5}>مجوزهای فاکتور</Title>
+                    <Divider>مجوزهای دسترسی</Divider>
                     
+                    <Form.Item name="canManageTickets" label="قابلیت مشاهده و پاسخ به تیکت‌ها" valuePropName="checked">
+                        <Switch />
+                    </Form.Item>
+                    <Form.Item name="canViewWooCommerceOrders" label="قابلیت مشاهده سفارشات سایت کتاب" valuePropName="checked">
+                        <Switch />
+                    </Form.Item>
                     <Form.Item name="canCreateInvoice" label="مجوز صدور فاکتور" valuePropName="checked">
                         <Switch />
                     </Form.Item>
-                    
                     <Form.Item name="canViewAllInvoices" label="مجوز مشاهده همه فاکتورها" valuePropName="checked">
                         <Switch />
                     </Form.Item>
-                    
+                     <Form.Item name="canViewInvoiceStats" label="قابلیت مشاهده آمار فاکتورها" valuePropName="checked">
+                        <Switch />
+                        </Form.Item>
+
                     <Form.Item style={{marginTop: '24px'}}>
                         <Button type="primary" htmlType="submit" loading={isSubmitting}>ذخیره تغییرات</Button>
                     </Form.Item>
                 </Form>
             </Modal>
 
-            {/* --- Modal for Adding User (Unchanged) --- */}
             <Modal title="افزودن کاربر جدید" open={isAddModalVisible} onCancel={() => setIsAddModalVisible(false)} footer={null}>
                  <Form form={addForm} layout="vertical" onFinish={handleAddUser} style={{ marginTop: 24 }}>
                     <Form.Item name="name" label="نام و نام خانوادگی" rules={[{ required: true, message: 'نام الزامی است.' }]}>
