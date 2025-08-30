@@ -7,15 +7,15 @@ const User = require('../models/user.model');
  * Sends OTP SMS to user
  */
 const notifyOnOtpRequest = async (mobileNumber, otp) => {
-    // try {
-    //     await sendPatternSms(
-    //         process.env.IPPANEL_OTP_PATTERN_CODE,
-    //         mobileNumber,
-    //         { "verification-code": otp }
-    //     );
-    // } catch (error) {
-    //     console.error("Error in notifyOnOtpRequest:", error);
-    // }
+    try {
+        await sendPatternSms(
+            process.env.IPPANEL_OTP_PATTERN_CODE,
+            mobileNumber,
+            { "verification-code": otp }
+        );
+    } catch (error) {
+        console.error("Error in notifyOnOtpRequest:", error);
+    }
     console.log(otp)
 };
 

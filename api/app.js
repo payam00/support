@@ -18,7 +18,7 @@ const discountRoutes = require('./src/routes/discount.routes'); // <-- Import cr
 const paymentRoutes = require('./src/routes/payment.routes'); // <-- Import crucial
 const woocommerceRoutes = require('./src/routes/woocommerce.routes');
 const announcementRoutes = require('./src/routes/announcement.routes');
-
+const notificationRoutes = require('./src/routes/notification.routes');
 require('./src/models/setting.model');
 
 const app = express();
@@ -47,5 +47,6 @@ app.use('/api/discounts', discountRoutes);
 app.use('/api/payment', paymentRoutes); 
 app.use('/api/woocommerce', woocommerceRoutes);
 app.use('/api/announcements', announcementRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 module.exports = app;

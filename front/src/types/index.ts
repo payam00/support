@@ -7,7 +7,7 @@ export interface Ticket {
   updatedAt: string;
   department: Department;
   createdBy: UserInfo;
-  messages: Message[];
+  messages: any[];
   assignedTo?: UserInfo | null;
    referralHistory: Referral[];
 }
@@ -27,11 +27,18 @@ export interface Faq {
   answer: string;
 }
 export interface UserInfo {
-  _id: string;
-  name: string;
-  mobileNumber: string;
-  role: 'user' | 'operator' | 'department_head' | 'admin';
-  createdAt?: string;
+    _id: string;
+    name: string;
+    mobileNumber: string;
+    role: 'user' | 'operator' | 'department_head' | 'admin';
+    isActive: boolean;
+    permissions?: {
+        canCreateInvoice?: boolean;
+        canViewAllInvoices?: boolean;
+        canManageTickets?: boolean;
+        canViewWooCommerceOrders?: boolean;
+        canViewInvoiceStats?: boolean;
+    };
 }
 
 export interface Message {
@@ -46,7 +53,7 @@ export interface Message {
 export interface VideoFlowQuestion {
   _id: string;
   text: string;
-  nextFlow: string; // ID of the next VideoFlow document
+  nextFlow: string; 
 }
 
 export interface VideoFlow {
@@ -62,6 +69,8 @@ export interface Referral {
     referredBy: UserInfo; 
     note: string;
     referredAt: string;
+    toDepartment?: Department; 
+    fromDepartment: Department;
 }
  export interface Order {
   id: number;

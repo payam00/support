@@ -9,6 +9,10 @@ const userSchema = new Schema({
         trim: true,
         match: [/^09\d{9}$/, 'فرمت شماره موبایل صحیح نیست.']
     },
+     pushSubscription: {
+        type: Object,
+        default: null
+    },
     otp: {
         type: String,
         default: null

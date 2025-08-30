@@ -14,33 +14,62 @@ const PAYPING_API_VERIFY_V3 = 'https://api.payping.ir/v3/pay/verify';
 async function selectGateway() {
     const settings = await Setting.findOne();
     if (!settings) throw new Error('تنظیمات سیستم یافت نشد.');
+
     const { gatewaySelectionStrategy, paymentGateways } = settings;
-    const { zarinpal, payping } = paymentGateways;
-    const availableGateways = [];
-    if (zarinpal && zarinpal.enabled) availableGateways.push('zarinpal');
-    if (payping && payping.enabled) availableGateways.push('payping');
-    if (availableGateways.length === 0) throw new Error('هیچ درگاه پرداخت فعالی در سیستم تعریف نشده است.');
-    switch (gatewaySelectionStrategy) {
-        case 'zarinpal_only':
-            if (!zarinpal || !zarinpal.enabled) throw new Error('درگاه انتخابی (زرین‌پال) فعال نیست.');
-            return 'zarinpal';
-        case 'payping_only':
-            if (!payping || !payping.enabled) throw new Error('درگاه انتخابی (پی‌پینگ) فعال نیست.');
-            return 'payping';
-        case 'random':
-        default:
-            return availableGateways[Math.floor(Math.random() * availableGateways.length)];
+    const enabledGateways = paymentGateways.filter(g => g.enabled).sort((a, b) => a.priority - b.priority);
+    if (enabledGateways.length === 0) throw new Error('هیچ درگاه پرداخت فعالی وجود ندارد.');
+
+    // Handle simple strategies
+    if (gatewaySelectionStrategy === 'random') {
+        return enabledGateways[Math.floor(Math.random() * enabledGateways.length)].name;
     }
+    if (gatewaySelectionStrategy === 'zarinpal_only' || gatewaySelectionStrategy === 'payping_only') {
+        const targetName = gatewaySelectionStrategy.split('_')[0];
+        if (!enabledGateways.some(g => g.name === targetName)) throw new Error(`درگاه انتخابی (${targetName}) فعال نیست.`);
+        return targetName;
+    }
+
+    // --- NEW: Handle advanced strategies ---
+    if (gatewaySelectionStrategy === 'amount_based' || gatewaySelectionStrategy === 'transaction_based') {
+        const fieldToCheck = gatewaySelectionStrategy === 'amount_based' ? 'processedAmount' : 'processedTransactions';
+        const maxField = gatewaySelectionStrategy === 'amount_based' ? 'maxAmount' : 'maxTransactions';
+
+        for (const gateway of enabledGateways) {
+            if (gateway[fieldToCheck] < gateway[maxField]) {
+                return gateway.name; // Found a suitable gateway
+            }
+        }
+
+        // If all gateways reached their limit, reset them and use the highest priority one
+        console.log(`All gateways reached their ${fieldToCheck} threshold. Resetting counters.`);
+        for (const gw of paymentGateways) {
+            gw.processedAmount = 0;
+            gw.processedTransactions = 0;
+        }
+        await settings.save();
+        
+        return enabledGateways[0].name;
+    }
+    
+    throw new Error('استراتژی انتخاب درگاه نامعتبر است.');
 }
 
 exports.initiatePayment = async (invoiceToken) => {
     const invoice = await Invoice.findOne({ uniqueToken: invoiceToken });
-    if (!invoice || invoice.status !== 'pending') throw new Error('فاکتور نامعتبر است.');
-    if (new Date(invoice.expiresAt) < new Date()) {
+     if (!invoice || !['pending', 'canceled'].includes(invoice.status)) {
+        throw new Error('این فاکتور در وضعیتی نیست که قابل پرداخت باشد.');
+        }   
+     if (new Date(invoice.expiresAt) < new Date()) {
         invoice.status = 'expired';
         await invoice.save();
         throw new Error('این فاکتور منقضی شده است.');
+        }
+          if (invoice.status === 'canceled') {
+        invoice.status = 'pending';
+        invoice.paymentAuthority = undefined;
+        invoice.paymentRefId = undefined;
     }
+
     const selectedGateway = await selectGateway();
     const amount = invoice.finalAmount;
     const callbackURL = `${process.env.API_BASE_URL}/api/payment/callback`;
@@ -151,11 +180,29 @@ exports.verifyPayment = async (queryParams) => {
         // This code now only runs if verification was successful
         invoice.status = 'paid';
         await invoice.save();
-
+    if (invoice && invoice.status === 'paid') {
+        // Increment both amount and transaction counters for the used gateway
+        await Setting.updateOne(
+            { 'paymentGateways.name': invoice.paymentGateway },
+            { 
+                $inc: { 
+                    'paymentGateways.$.processedAmount': invoice.finalAmount,
+                    'paymentGateways.$.processedTransactions': 1
+                } 
+            }
+        );
+    }
         if (invoice.discount && invoice.discount.code) {
             await Discount.updateOne({ code: invoice.discount.code }, { $inc: { timesUsed: 1 } });
         }
-
+         const payload = {
+            title: '🎉 پرداخت موفق',
+            body: `فاکتور شماره ${invoice._id.toString().slice(-6)} به مبلغ ${invoice.finalAmount.toLocaleString()} ریال پرداخت شد.`,
+            url: `/invoices` // URL to open when notification is clicked
+        };
+        // The `createdBy` field should be populated to get the user ID
+        await invoice.populate('createdBy'); 
+        await sendNotificationToUser(invoice.createdBy._id, payload);
         return invoice;
 
     } catch (error) {

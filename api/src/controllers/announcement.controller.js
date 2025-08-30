@@ -1,5 +1,6 @@
 const Announcement = require('../models/announcement.model');
-
+const User = require('../models/user.model');
+const { sendNotificationToUser } = require('../services/push.service');
 // @desc    Get all announcements (for admin panel)
 exports.getAnnouncements = async (req, res) => {
     try {
@@ -28,7 +29,7 @@ exports.getActiveAnnouncements = async (req, res) => {
     }
 };
 
-// @desc    Create a new announcement
+// @desc    Create a new announcement and notify users
 exports.createAnnouncement = async (req, res) => {
     try {
         const { title, content, type, isActive, targetRoles } = req.body;
@@ -37,14 +38,47 @@ exports.createAnnouncement = async (req, res) => {
             content,
             type,
             isActive,
-            targetRoles, // <-- Add new field
+            targetRoles,
             createdBy: req.user._id
         });
-        res.status(201).json(announcement);
+
+        // --- NEW: Send push notifications if the announcement is active ---
+        if (announcement.isActive) {
+            // Build the query to find target users
+            const query = {
+                pushSubscription: { $ne: null, $exists: true } // Find users who are subscribed
+            };
+
+            // If roles are specified, add them to the query
+            if (targetRoles && targetRoles.length > 0) {
+                query.role = { $in: targetRoles };
+            }
+
+            const usersToNotify = await User.find(query).select('_id');
+
+            if (usersToNotify.length > 0) {
+                console.log(`Sending notification for new announcement to ${usersToNotify.length} user(s).`);
+                
+                const payload = {
+                    title: `اطلاعیه جدید: ${announcement.title}`,
+                    body: 'یک اطلاعیه جدید در پنل منتشر شد. برای مشاهده کلیک کنید.',
+                    url: '/dashboard' 
+                };
+                
+                // Send notifications in parallel without waiting for all to finish
+                const notificationPromises = usersToNotify.map(user => 
+                    sendNotificationToUser(user._id, payload)
+                );
+                Promise.all(notificationPromises);
+            }
+        }
+                res.status(201).json(announcement);
     } catch (error) {
+        console.error("Error creating announcement:", error);
         res.status(500).json({ message: 'خطای سرور' });
     }
 };
+
 
 // @desc    Update an announcement
 exports.updateAnnouncement = async (req, res) => {

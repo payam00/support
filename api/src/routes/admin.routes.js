@@ -3,8 +3,9 @@ const {
     addUser, 
     getAllUsers, 
     updateUser,
-    getSettings, // <-- Import getSettings
-    updateSettings 
+    getSettings, 
+    updateSettings,
+     resetGatewayCounters
 } = require('../controllers/admin.controller');
 const { protect, authorize } = require('../middlewares/auth.middleware');
 const router = express.Router();
@@ -24,5 +25,6 @@ router.route('/users/:id')
 router.route('/settings')
     .get(getSettings) // <-- Add the GET route for settings
     .put(updateSettings);
+router.post('/settings/reset-gateway', resetGatewayCounters);
 
 module.exports = router;

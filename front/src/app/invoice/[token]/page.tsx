@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { App, Card, Descriptions, Spin, Result, Button, Checkbox, Typography, Divider, Input, Row, Col } from 'antd';
-import { DeleteOutlined } from '@ant-design/icons';
+import { DeleteOutlined,ReloadOutlined } from '@ant-design/icons';
 import { getPublicInvoice } from '@/lib/api';
 import api from '@/lib/api';
 import { format } from 'date-fns-jalali';
@@ -59,8 +59,8 @@ export default function PublicInvoicePage() {
         }
     };
     
-    const handlePay = async () => {
-        if (!termsAccepted) {
+     const handlePay = async () => {
+        if (invoice.status === 'pending' && !termsAccepted) {
             message.error('لطفاً ابتدا قوانین و مقررات را تایید کنید.');
             return;
         }
@@ -71,7 +71,7 @@ export default function PublicInvoicePage() {
             window.location.href = paymentUrl;
         } catch (err: any) {
             notification.error({ message: 'خطا', description: err.response?.data?.message || 'خطا در شروع فرآیند پرداخت' });
-            setIsProcessing(false);
+            setIsProcessing(false); // Only set loading to false on error
         }
     };
 
@@ -107,13 +107,36 @@ export default function PublicInvoicePage() {
 
     const renderStatusSpecificContent = () => {
         switch (invoice.status) {
-            case 'paid': return <Result status="success" title="این فاکتور با موفقیت پرداخت شده است" subTitle={`شماره پیگیری: ${invoice.paymentRefId || 'ثبت نشده'}`} />;
-            case 'expired': return <Result status="warning" title="این فاکتور منقضی شده است" />;
-            case 'canceled': return <Result status="error" title="این فاکتور لغو شده است" />;
-            case 'pending': return renderPendingContent();
-            default: return null;
+            case 'paid':
+                return <Result status="success" title="این فاکتور با موفقیت پرداخت شده است" subTitle={`شماره پیگیری: ${invoice.paymentRefId || 'ثبت نشده'}`} />;
+            case 'expired':
+                return <Result status="warning" title="این فاکتور منقضی شده است" />;
+            
+            case 'canceled':
+                return (
+                    <Result
+                        status="error"
+                        title="این فاکتور لغو شده است"
+                        subTitle="شما می‌توانید مجدداً برای پرداخت اقدام کنید."
+                        extra={
+                            <Button 
+                                type="primary" 
+                                icon={<ReloadOutlined />}
+                                onClick={handlePay}
+                                loading={isProcessing}
+                            >
+                                پرداخت مجدد
+                            </Button>
+                        }
+                    />
+                );
+            case 'pending':
+                return renderPendingContent();
+            default:
+                return null;
         }
     };
+
 
     return (
         <div style={{ maxWidth: '900px', margin: '40px auto', padding: '20px' }}>

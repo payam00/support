@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import localFont from 'next/font/local';
 import "./globals.scss";
 import StyledComponentsRegistry from "@/lib/AntdRegistry";
@@ -15,11 +14,13 @@ const iranYekan = localFont({
   ],
   variable: '--font-iranyekan',
 });
-const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "سامانه تیکتینگ هوشمند",
-  description: "پلتفرم مدرن پشتیبانی مشتریان",
+  title: "سامانه پشتیبانی هوشمند",
+  description: "پلتفرم مدرن پشتیبانی زبان آموزان آفاق",
+  icons: {
+    icon: '/favicon.png' 
+  },
 };
 
 export default function RootLayout({

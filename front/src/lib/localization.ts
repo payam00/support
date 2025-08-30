@@ -6,7 +6,10 @@ export const TICKET_STATUS_PERSIAN: Record<Ticket['status'], string> = {
   Answered: 'پاسخ داده شده',
   'In-Progress': 'در حال بررسی',
   Closed: 'بسته شده',
-   Referred: 'ارجاع داده شده',
+  Referred: 'ارجاع داده شده',
+  'Answered by AI': 'پاسخ توسط هوش مصنوعی',
+  'Awaiting AI': 'در انتظار هوش مصنوعی',
+  // ------------------------------------
 };
 
 // رنگ‌های متناظر با هر وضعیت
@@ -16,6 +19,9 @@ export const TICKET_STATUS_COLORS: Record<Ticket['status'], string> = {
   'In-Progress': 'orange',
   Closed: 'default',
   Referred: 'gold',
+  'Answered by AI': 'cyan',
+  'Awaiting AI': 'purple',
+  // ------------------------------------
 };
 
 // ترجمه فارسی برای اولویت‌های تیکت

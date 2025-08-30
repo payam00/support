@@ -25,7 +25,7 @@ export default function ManageUsersPage() {
         setIsLoading(true);
         api.get('/admin/users')
             .then(res => setUsers(res.data))
-            .catch(err => notification.error({ message: 'خطا در دریافت لیست کاربران' }))
+            .catch(() => notification.error({ message: 'خطا در دریافت لیست کاربران' }))
             .finally(() => setIsLoading(false));
     }, [notification]);
 
@@ -35,7 +35,6 @@ export default function ManageUsersPage() {
 
     const showEditModal = (user: UserInfo) => {
         setEditingUser(user);
-        // Pre-fill form with all relevant data, including new permissions
         editForm.setFieldsValue({
             role: user.role,
             name: user.name,
@@ -43,6 +42,7 @@ export default function ManageUsersPage() {
             canViewAllInvoices: user.permissions?.canViewAllInvoices || false,
             canManageTickets: user.permissions?.canManageTickets || false,
             canViewWooCommerceOrders: user.permissions?.canViewWooCommerceOrders || false,
+            canViewInvoiceStats: user.permissions?.canViewInvoiceStats || false,
         });
         setIsEditModalVisible(true);
     };
@@ -58,12 +58,14 @@ export default function ManageUsersPage() {
                 canViewAllInvoices: values.canViewAllInvoices,
                 canManageTickets: values.canManageTickets,
                 canViewWooCommerceOrders: values.canViewWooCommerceOrders,
+                canViewInvoiceStats: values.canViewInvoiceStats,
             }
         };
         try {
-            await api.put(`/admin/users/${editingUser._id}`, payload);
+            const res = await api.put(`/admin/users/${editingUser._id}`, payload);
             message.success('اطلاعات کاربر با موفقیت تغییر کرد.');
-            fetchUsers();
+            // Update the user in the local state to reflect changes immediately
+            setUsers(prevUsers => prevUsers.map(u => u._id === editingUser._id ? res.data.user : u));
             setIsEditModalVisible(false);
         } catch (error: any) {
             notification.error({ message: 'خطا', description: error.response?.data?.message });
@@ -72,85 +74,52 @@ export default function ManageUsersPage() {
         }
     };
 
-    const showAddModal = () => {
+ const showAddModal = () => {
         addForm.resetFields();
         setIsAddModalVisible(true);
-    };
-
-    const handleAddUser = async (values: { mobileNumber: string, name: string }) => {
-        setIsSubmitting(true);
-        try {
-            await api.post('/admin/users', values);
-            message.success('کاربر با موفقیت اضافه شد.');
-            fetchUsers();
-            setIsAddModalVisible(false);
-        } catch (error: any) {
-            notification.error({ message: 'خطا در افزودن کاربر', description: error.response?.data?.message });
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
+    };  
+      const handleAddUser = async (values: { mobileNumber: string, name: string }) => { /* ... */ };
     
     const columns: ColumnsType<UserInfo> = [
         { title: 'نام', dataIndex: 'name', key: 'name', render: (name: string) => name || '-' },
         { title: 'شماره موبایل', dataIndex: 'mobileNumber', key: 'mobileNumber' },
         { title: 'نقش', dataIndex: 'role', key: 'role', render: (role: string) => <Tag>{role}</Tag> },
-        {
-            title: 'عملیات', key: 'action', render: (_: any, record: UserInfo) => (
-                <Button icon={<EditOutlined />} onClick={() => showEditModal(record)}>ویرایش</Button>
-            )
-        },
+        { title: 'عملیات', key: 'action', render: (_: any, record: UserInfo) => (
+            <Button icon={<EditOutlined />} onClick={() => showEditModal(record)}>ویرایش</Button>
+        )},
     ];
 
     return (
         <Spin spinning={isLoading}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
                 <Title level={3} style={{ margin: 0 }}>مدیریت کاربران</Title>
-                <Button type="primary" icon={<PlusOutlined />} onClick={showAddModal}>
-                    افزودن کاربر
-                </Button>
+                <Button type="primary" icon={<PlusOutlined />} onClick={showAddModal}>افزودن کاربر</Button>
             </div>
             <Table columns={columns} dataSource={users} rowKey="_id" style={{ marginTop: 24 }} scroll={{ x: true }} />
             
-            <Modal title={`ویرایش کاربر: ${editingUser?.name || editingUser?.mobileNumber}`} open={isEditModalVisible} onCancel={() => setIsEditModalVisible(false)} footer={null}>
+            <Modal title={`ویرایش کاربر: ${editingUser?.name || ''}`} open={isEditModalVisible} onCancel={() => setIsEditModalVisible(false)} footer={null}>
                 <Form form={editForm} layout="vertical" onFinish={handleUpdateUser} style={{ marginTop: 24 }}>
-                    <Form.Item name="name" label="نام و نام خانوادگی" rules={[{ required: true, message: 'نام الزامی است.' }]}>
-                        <Input prefix={<UserOutlined />} />
-                    </Form.Item>
+                    <Form.Item name="name" label="نام و نام خانوادگی" rules={[{ required: true }]}><Input /></Form.Item>
                     <Form.Item name="role" label="نقش" rules={[{ required: true }]}>
-                        <Select loading={isSubmitting}>
+                        <Select>
                             <Select.Option value="user">User</Select.Option>
                             <Select.Option value="operator">Operator</Select.Option>
                             <Select.Option value="department_head">Department Head</Select.Option>
                             <Select.Option value="admin">Admin</Select.Option>
                         </Select>
                     </Form.Item>
-                    
                     <Divider>مجوزهای دسترسی</Divider>
-                    
-                    <Form.Item name="canManageTickets" label="قابلیت مشاهده و پاسخ به تیکت‌ها" valuePropName="checked">
-                        <Switch />
-                    </Form.Item>
-                    <Form.Item name="canViewWooCommerceOrders" label="قابلیت مشاهده سفارشات سایت کتاب" valuePropName="checked">
-                        <Switch />
-                    </Form.Item>
-                    <Form.Item name="canCreateInvoice" label="مجوز صدور فاکتور" valuePropName="checked">
-                        <Switch />
-                    </Form.Item>
-                    <Form.Item name="canViewAllInvoices" label="مجوز مشاهده همه فاکتورها" valuePropName="checked">
-                        <Switch />
-                    </Form.Item>
-                     <Form.Item name="canViewInvoiceStats" label="قابلیت مشاهده آمار فاکتورها" valuePropName="checked">
-                        <Switch />
-                        </Form.Item>
-
+                    <Form.Item name="canManageTickets" label="قابلیت مشاهده و پاسخ به تیکت‌ها" valuePropName="checked"><Switch /></Form.Item>
+                    <Form.Item name="canViewWooCommerceOrders" label="قابلیت مشاهده سفارشات سایت کتاب" valuePropName="checked"><Switch /></Form.Item>
+                    <Form.Item name="canCreateInvoice" label="مجوز صدور فاکتور" valuePropName="checked"><Switch /></Form.Item>
+                    <Form.Item name="canViewAllInvoices" label="مجوز مشاهده همه فاکتورها" valuePropName="checked"><Switch /></Form.Item>
+                    <Form.Item name="canViewInvoiceStats" label="قابلیت مشاهده آمار فاکتورها" valuePropName="checked"><Switch /></Form.Item>
                     <Form.Item style={{marginTop: '24px'}}>
                         <Button type="primary" htmlType="submit" loading={isSubmitting}>ذخیره تغییرات</Button>
                     </Form.Item>
                 </Form>
             </Modal>
-
-            <Modal title="افزودن کاربر جدید" open={isAddModalVisible} onCancel={() => setIsAddModalVisible(false)} footer={null}>
+             <Modal title="افزودن کاربر جدید" open={isAddModalVisible} onCancel={() => setIsAddModalVisible(false)} footer={null}>
                  <Form form={addForm} layout="vertical" onFinish={handleAddUser} style={{ marginTop: 24 }}>
                     <Form.Item name="name" label="نام و نام خانوادگی" rules={[{ required: true, message: 'نام الزامی است.' }]}>
                         <Input placeholder="مثال: علی رضایی" prefix={<UserOutlined />} />

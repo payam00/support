@@ -1,118 +1,94 @@
 const Ticket = require('../models/ticket.model');
-const Department = require('../models/department.model');
 const Invoice = require('../models/invoice.model');
 const mongoose = require('mongoose');
 
+// @desc    Get dashboard stats for tickets
+// @route   GET /api/stats/dashboard
+// @access  Private (Managers/Admins)
 exports.getDashboardStats = async (req, res) => {
     try {
-        const { role, _id } = req.user;
-        // --- FIX: startDate and endDate were used before being defined ---
-        const { departmentId, startDate, endDate } = req.query; 
+        const { departmentId } = req.query;
+        let matchQuery = {};
 
-        let departmentIds = [];
-
-        if (role === 'admin') {
-            if (departmentId && mongoose.Types.ObjectId.isValid(departmentId)) {
-                departmentIds = [new mongoose.Types.ObjectId(departmentId)];
-            }
-        } else if (role === 'department_head') {
-            const userDepartments = await Department.find({ head: _id }).select('_id');
-            departmentIds = userDepartments.map(d => d._id);
-        } else {
-            return res.status(403).json({ message: 'دسترسی مجاز نیست.' });
+        if (req.user.role === 'department_head') {
+            const userDepartments = await mongoose.model('Department').find({ head: req.user._id }).select('_id');
+            const departmentIds = userDepartments.map(d => d._id);
+            matchQuery = { department: { $in: departmentIds } };
+        } else if (req.user.role === 'admin' && departmentId) {
+            matchQuery = { department: new mongoose.Types.ObjectId(departmentId) };
         }
-        
-        const matchQuery = departmentIds.length > 0
-            ? { department: { $in: departmentIds } }
-            : {};
-        
-        if (startDate && endDate) {
-            matchQuery.createdAt = {
-                $gte: new Date(startDate),
-                $lte: new Date(endDate),
-            };
-        }
-        
-        const statusStats = await Ticket.aggregate([ { $match: matchQuery }, { $group: { _id: '$status', count: { $sum: 1 } } } ]);
-        const ticketCounts = { Open: 0, Answered: 0, 'In-Progress': 0, Closed: 0, Total: 0 };
-        statusStats.forEach(stat => {
-            if (ticketCounts.hasOwnProperty(stat._id)) ticketCounts[stat._id] = stat.count;
-        });
-        ticketCounts.Total = statusStats.reduce((sum, stat) => sum + stat.count, 0);
 
-        const operatorPerformance = await Ticket.aggregate([
-            { $match: { ...matchQuery, assignedTo: { $ne: null } } },
-            { $group: { _id: '$assignedTo', count: { $sum: 1 } } },
-            { $sort: { count: -1 } },
-            { $limit: 10 },
-            { $lookup: { from: 'users', localField: '_id', foreignField: '_id', as: 'operator' } },
-            { $unwind: '$operator' },
-            { $project: { _id: 0, operatorName: '$operator.name', ticketsSolved: '$count' } }
+        const ticketCounts = await Ticket.aggregate([
+            { $match: matchQuery },
+            { $group: { _id: '$status', count: { $sum: 1 } } }
         ]);
 
-        res.status(200).json({ ticketCounts, operatorPerformance });
+        const operatorPerformance = await Ticket.aggregate([
+            { $match: { ...matchQuery, status: 'Closed', assignedTo: { $ne: null } } },
+            { $group: { _id: '$assignedTo', ticketsSolved: { $sum: 1 } } },
+            { $lookup: { from: 'users', localField: '_id', foreignField: '_id', as: 'operatorInfo' } },
+            { $unwind: '$operatorInfo' },
+            { $project: { _id: 0, operatorName: '$operatorInfo.name', ticketsSolved: 1 } },
+            { $sort: { ticketsSolved: -1 } }
+        ]);
 
+        const formattedCounts = { Open: 0, Answered: 0, 'In-Progress': 0, Closed: 0, Total: 0 };
+        ticketCounts.forEach(item => {
+            formattedCounts[item._id] = item.count;
+            formattedCounts.Total += item.count;
+        });
+
+        res.status(200).json({ ticketCounts: formattedCounts, operatorPerformance });
     } catch (error) {
-        console.error("Error in getDashboardStats:", error);
-        res.status(500).json({ message: 'خطای سرور' });
+        res.status(500).json({ message: 'خطا در محاسبه آمار تیکت‌ها' });
     }
 };
+
+
+// --- FINAL AND CORRECTED function for Invoice Stats ---
+// @desc    Get dashboard stats for invoices
+// @route   GET /api/stats/invoices
+// @access  Private (Requires Permission)
 exports.getInvoiceStats = async (req, res) => {
     try {
-        // --- PERMISSION CHECK ---
-        if (req.user.role !== 'admin' && !req.user.permissions.canViewInvoiceStats) {
+        // --- FIX: A more robust and clear permission check ---
+        const isAdmin = req.user.role === 'admin';
+        const hasPermission = req.user.permissions && req.user.permissions.canViewInvoiceStats;
+
+        if (!isAdmin && !hasPermission) {
             return res.status(403).json({ message: 'شما مجوز مشاهده آمار فاکتورها را ندارید.' });
         }
-        // ------------------------
+        // ----------------------------------------------------
         
         // 1. Get overall invoice counts by status
         const invoiceCounts = await Invoice.aggregate([
             { $group: { _id: '$status', count: { $sum: 1 } } }
         ]);
 
-        const formattedCounts = {
-            pending: 0,
-            paid: 0,
-            canceled: 0,
-            expired: 0,
-            total: 0
-        };
+        const formattedCounts = { pending: 0, paid: 0, canceled: 0, expired: 0, total: 0 };
         invoiceCounts.forEach(item => {
-            formattedCounts[item._id] = item.count;
+            if (formattedCounts.hasOwnProperty(item._id)) {
+                formattedCounts[item._id] = item.count;
+            }
             formattedCounts.total += item.count;
         });
 
         // 2. Get operator performance
         const operatorPerformance = await Invoice.aggregate([
-            {
-                $group: {
-                    _id: '$createdBy',
-                    totalIssued: { $sum: 1 },
-                    totalPaid: {
-                        $sum: { $cond: [{ $eq: ['$status', 'paid'] }, 1, 0] }
-                    }
-                }
-            },
-            {
-                $lookup: { 
-                    from: 'users',
-                    localField: '_id',
-                    foreignField: '_id',
-                    as: 'operator'
-                }
-            },
-            {
-                $unwind: '$operator'
-            },
-            {
-                $project: {
-                    _id: 0,
-                    operatorId: '$_id',
-                    operatorName: '$operator.name',
-                    totalIssued: 1,
-                    totalPaid: 1
-                }
-            },
+            { $group: {
+                _id: '$createdBy',
+                totalIssued: { $sum: 1 },
+                totalPaid: { $sum: { $cond: [{ $eq: ['$status', 'paid'] }, 1, 0] } }
+            }},
+            { $lookup: { from: 'users', localField: '_id', foreignField: '_id', as: 'operator' }},
+            { $unwind: '$operator' },
+            { $project: {
+                _id: 0,
+                operatorId: '$_id',
+                operatorName: '$operator.name',
+                totalIssued: 1,
+                totalPaid: 1
+            }},
             { $sort: { totalIssued: -1 } }
         ]);
 
