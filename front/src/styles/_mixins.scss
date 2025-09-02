@@ -1,0 +1,27 @@
+// 1. Define Breakpoints as Variables
+// This allows us to easily manage breakpoints from one place.
+$breakpoint-tablet: 768px;
+$breakpoint-mobile: 576px;
+
+
+// 2. Create the Mixin
+// This mixin accepts a breakpoint and applies the styles within it inside a media query.
+// We are using a "desktop-first" approach where we modify styles for smaller screens.
+@mixin respond-below($breakpoint) {
+  @media (max-width: $breakpoint) {
+    @content; // The @content directive passes the styles into the mixin.
+  }
+}
+
+// 3. Create semantic mixins for easier use
+@mixin tablet {
+  @include respond-below($breakpoint-tablet) {
+    @content;
+  }
+}
+
+@mixin mobile {
+  @include respond-below($breakpoint-mobile) {
+    @content;
+  }
+}

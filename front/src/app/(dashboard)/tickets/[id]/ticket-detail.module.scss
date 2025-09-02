@@ -1,0 +1,153 @@
+
+.pageHeader {
+  background-color: #fafafa;
+  border-radius: 8px;
+  margin-bottom: 24px;
+}
+
+.assignmentPanel {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.assignmentStatus {
+    display: flex;
+    align-items: center;
+}
+
+.aiSummary {
+  margin-bottom: 24px;
+  border: 1px solid #e8e8e8;
+}
+
+.messageList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  height: 50vh;
+  overflow-y: auto;
+}
+
+.messageBubble {
+  max-width: 70%;
+  padding: 12px 16px;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  
+  .senderName {
+    font-weight: 700;
+    margin-bottom: 6px;
+    font-size: 12px;
+    display: block;
+  }
+
+  .messageContent {
+    white-space: pre-wrap; 
+    word-wrap: break-word;
+  }
+
+  .timestamp {
+    font-size: 10px;
+    margin-top: 8px;
+    text-align: left;
+    opacity: 0.7;
+    align-self: flex-end;
+  }
+}
+
+.messageUser {
+  align-self: flex-end;
+  background-color: #e6f7ff;
+  border-bottom-right-radius: 4px;
+}
+
+.messageOperator {
+  align-self: flex-start;
+  background-color: #fff;
+  border: 1px solid #f0f0f0;
+  border-bottom-left-radius: 4px;
+}
+
+.messageAi {
+  align-self: flex-start;
+  background-color: #f6ffed;
+  border: 1px solid #b7eb8f;
+  border-bottom-left-radius: 4px;
+  .senderName {
+    color: #52c41a;
+  }
+}
+
+.aiFeedback {
+    margin-top: 24px;
+    text-align: center;
+}
+
+.feedbackButtons {
+    margin-top: 16px;
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+}
+
+.referralHistory {
+    margin-bottom: 24px;
+}
+
+.referralNote {
+    background-color: #fafad2;
+    padding: 8px 12px;
+    border-radius: 4px;
+    margin-top: 8px !important;
+    border-left: 3px solid #f0e68c;
+}
+
+.replyForm {
+    margin-top: 24px;
+    padding: 24px;
+    border: 1px solid #f0f0f0;
+    border-radius: 8px;
+}
+
+.suggestionsContainer {
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f0f0f0;
+  h5 {
+    margin-bottom: 12px;
+  }
+  .suggestionButtons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}
+
+.voiceRecorder {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+/* --- FIX: استایل جدید برای پیام‌های سیستمی --- */
+.messageSystem {
+  align-self: center; // در وسط قرار می‌گیرد
+  width: 100%;
+  max-width: 100%;
+  background-color: #fafafa; // رنگ خنثی
+  text-align: center;
+  font-style: italic;
+  color: #8c8c8c;
+  padding: 8px 16px;
+  font-size: 12px;
+
+  .senderName, .timestamp {
+    display: none; // نام و زمان برای پیام سیستمی نمایش داده نمی‌شود
+  }
+}
